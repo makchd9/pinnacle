@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            color: #e63946;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: auto;
+            background: #2b2d42;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .form-section, .stats-section {
+            flex: 1;
+            margin: 10px;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #e63946;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #e63946;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background-color: #d62828;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #6a0572;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #1d3557;
+            color: #fff;
+        }
+        table th, table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #457b9d;
+        }
+        .stats-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+        }
+        .stats-graph {
+            width: 100%;
+            max-height: 300px;
+            background-color: #1d3557;
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .statistics {
+            background-color: #457b9d;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .reminder-section {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #2a9d8f;
+            border-radius: 5px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Budget Tracker</h1>
+    <div class="container">
+        <!-- Form Section -->
+        <div class="form-section">
+            <div class="input-group">
+                <label for="user-phone">Phone Number:</label>
+                <input type="tel" id="user-phone" placeholder="e.g. 9876543210" pattern="[0-9]{10}" />
+            </div>
+            <div class="input-group">
+                <label for="budget-category">Budget Category:</label>
+                <input type="text" id="budget-category" placeholder="e.g. Groceries" />
+            </div>
+            <div class="input-group">
+                <label for="amount">Amount (₹):</label>
+                <input type="number" id="amount" placeholder="e.g. 500" />
+            </div>
+            <div class="input-group">
+                <label for="duration">Duration:</label>
+                <select id="duration">
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                </select>
+            </div>
+            <button class="button" onclick="addBudget()">Add Budget</button>
+
+            <div class="summary">
+                <h2>Budget Table</h2>
+                <table id="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Weekly (₹)</th>
+                            <th>Monthly (₹)</th>
+                            <th>Yearly (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows will be added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="reminder-section">
+                <h2>Set Budget Reminder</h2>
+                <div class="input-group">
+                    <label for="reminder-category">Category:</label>
+                    <input type="text" id="reminder-category" placeholder="e.g. Groceries" />
+                </div>
+                <div class="input-group">
+                    <label for="reminder-duration">Duration:</label>
+                    <select id="reminder-duration">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="reminder-threshold">Threshold Amount (₹):</label>
+                    <input type="number" id="reminder-threshold" placeholder="e.g. 1000" />
+                </div>
+                <button class="button" onclick="setReminder()">Set Reminder</button>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="statistics" id="statistics">
+                <!-- Total summary will be added dynamically -->
+            </div>
+            <div class="stats-graph">
+                <canvas id="budgetChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const budgets = {};
+        const reminders = {};
+        let chart;
+
+        function addBudget() {
+            const category = document.getElementById('budget-category').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const duration = document.getElementById('duration').value;
+
+            if (category && !isNaN(amount) && amount > 0) {
+                if (!budgets[category]) {
+                    budgets[category] = { weekly: 0, monthly: 0, yearly: 0 };
+                }
+                budgets[category][duration] += amount;
+
+                updateTable();
+                updateChart();
+                updateStatistics();
+
+                // Clear input fields
+                document.getElementById('budget-category').value = '';
+                document.getElementById('amount').value = '';
+                document.getElementById('duration').value = 'weekly';
+            } else {
+                alert('Please enter a valid category and amount.');
+            }
+        }
+
+        function setReminder() {
+            const category = document.getElementById('reminder-category').value.trim();
+            const duration = document.getElementById('reminder-duration').value;
+            const threshold = parseFloat(document.getElementById('reminder-threshold').value);
+
+            if (category && !isNaN(threshold) && threshold > 0) {
+                reminders[category] = { duration, threshold };
+                alert(`Reminder set for ${category} - ${duration}: ₹${threshold}`);
+            } else {
+                alert('Please enter valid reminder details.');
+            }
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('budget-table').querySelector('tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            for (const category in budgets) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${category}</td>
+                    <td>₹${budgets[category].weekly.toFixed(2)}</td>
+                    <td>₹${budgets[category].monthly.toFixed(2)}</td>
+                    <td>₹${budgets[category].yearly.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('budgetChart').getContext('2d');
+            const categories = Object.keys(budgets);
+            const weeklyData = categories.map(cat => budgets[cat].weekly);
+            const monthlyData = categories.map(cat => budgets[cat].monthly);
+            const yearlyData = categories.map(cat => budgets[cat].yearly);
+
+            if (chart) {
+                chart.destroy(); // Destroy previous chart before updating
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [
+                        {
+                            label: 'Weekly (₹)',
+                            data: weeklyData,
+                            backgroundColor: 'rgba(230, 57, 70, 0.6)'
+                        },
+                        {
+                            label: 'Monthly (₹)',
+                            data: monthlyData,
+                            backgroundColor: 'rgba(97, 4, 124 , 0.6)'
+                        },
+                        {
+                            label: 'Yearly (₹)',
+                            data: yearlyData,
+                            backgroundColor: 'rgba(69, 123, 157, 0.6)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateStatistics() {
+            const statsDiv = document.getElementById('statistics');
+            let totalWeekly = 0;
+            let totalMonthly = 0;
+            let totalYearly = 0;
+
+            for (const category in budgets) {
+                totalWeekly += budgets[category].weekly;
+                totalMonthly += budgets[category].monthly;
+                totalYearly += budgets[category].yearly;
+
+                if (reminders[category]) {
+                    const { duration, threshold } = reminders[category];
+                    if (budgets[category][duration] > threshold) {
+                        alert(`Reminder: ${category} has exceeded its ${duration} budget of ₹${threshold}`);
+                    }
+                }
+            }
+
+            statsDiv.innerHTML = `
+                <h2>Budget Summary</h2>
+                <p>Total Weekly: ₹${totalWeekly.toFixed(2)}</p>
+                <p>Total Monthly: ₹${totalMonthly.toFixed(2)}</p>
+                <p>Total Yearly: ₹${totalYearly.toFixed(2)}</p>
+            `;
+        }
+    </script>
+
+</body>
+</html>
